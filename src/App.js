@@ -19,7 +19,14 @@ import { Button } from 'bootstrap';
 function ExchangePersonEntry({ children, eventKey, callback, p_index, p_data, personValueChanged, removePerson}){
 
 	function changeValue(e){
-		p_data[e.target.name] = e.target.value; //le prototype poisoning moment
+		p_data[e.target.name] = e.target.value;
+		console.log(p_data[e.target.name]); //le prototype poisoning moment
+		personValueChanged(p_index, p_data);
+	}
+
+	function changeCheck(e){
+		p_data[e.target.name] = e.target.checked;
+		console.log(p_data[e.target.name]); //le prototype poisoning moment
 		personValueChanged(p_index, p_data);
 	}
 
@@ -36,19 +43,19 @@ function ExchangePersonEntry({ children, eventKey, callback, p_index, p_data, pe
 			<Accordion.Header>{isCurrentEventKey?(<Form.Control onChange={(e) => changeValue(e)} name="name" type="text" value={p_data.name} onClick={(e)=>{e.stopPropagation();return false;}}></Form.Control>):p_data.name}</Accordion.Header>
 	  			<Accordion.Body>
 						<Form.Label>Country</Form.Label>
-						<Form.Control name="country" value={p_data.country} type="text"></Form.Control>
+						<Form.Control onChange={(e) => changeValue(e)} name="country" value={p_data.country} type="text"></Form.Control>
 						<Form.Label >State</Form.Label>
-						<Form.Control name="state" value={p_data.state} type="text"></Form.Control>
+						<Form.Control onChange={(e) => changeValue(e)} name="state" value={p_data.state} type="text"></Form.Control>
 						<Form.Label>Shipping Address</Form.Label>
-						<Form.Control name="address" value={p_data.address} type="text"></Form.Control>
+						<Form.Control onChange={(e) => changeValue(e)} name="address" value={p_data.address} type="text"></Form.Control>
 						<Form.Label>Zip Code</Form.Label>
-						<Form.Control name="zip" value={p_data.zip} type="text"></Form.Control>
+						<Form.Control onChange={(e) => changeValue(e)} name="zip" value={p_data.zip} type="text"></Form.Control>
 						<Form.Label>Can <b>ship</b> internationally</Form.Label>
-						<Form.Check name="ships_international" value={p_data.ships_international} type="checkbox"></Form.Check>
+						<Form.Check onChange={(e) => changeCheck(e)} name="ships_international" checked={p_data.ships_international} type="checkbox"></Form.Check>
 						<Form.Label>Can <b>receive</b> internationally</Form.Label>
-						<Form.Check name="receives_international" value={p_data.receives_international} type="checkbox"></Form.Check>
+						<Form.Check onChange={(e) => changeCheck(e)} name="receives_international" checked={p_data.receives_international} type="checkbox"></Form.Check>
 						<Form.Label>Notes</Form.Label>
-						<Form.Control name="notes" type="text" value={p_data.notes}></Form.Control>
+						<Form.Control onChange={(e) => changeValue(e)} name="notes" type="text" value={p_data.notes}></Form.Control>
 						<Butt variant="danger" onClick={kys}>Remove</Butt>
 	  			</Accordion.Body>
 		</Accordion.Item>
@@ -56,20 +63,18 @@ function ExchangePersonEntry({ children, eventKey, callback, p_index, p_data, pe
 }
 class App extends React.Component{
 
-	
-
 	exchange_people = [
 		{
-			name: "Dave"
+			name: "Dave", country: "", state: "", address:"", zip:"", ships_international: true, receives_international: true, notes: ""
 		},
 		{
-			name: "John"
+			name: "John", country: "", state: "", address:"", zip:"", ships_international: true, receives_international: true, notes: ""
 		},
 		{
-			name: "Rose"
+			name: "Rose", country: "", state: "", address:"", zip:"", ships_international: true, receives_international: true, notes: ""
 		},
 		{
-			name: "Jade"
+			name: "Jade", country: "", state: "", address:"", zip:"", ships_international: true, receives_international: true, notes: ""
 		}
 	]
 
@@ -94,8 +99,92 @@ class App extends React.Component{
 
 		const addPerson = () => {
 			const newState = this.state;
-			newState.people.push({name: "Name"});
+			newState.people.push({name: "Name", country: "", state: "", address:"", zip:"", ships_international: true, receives_international: true, notes: ""});
 			this.setState(newState);
+		}
+
+		const generatePairings = () => {
+		
+			let people = this.state.people;
+	
+			const pairings = []
+		
+			const givers_international = people.filter((p) => p.ships_international).sort((a,b) => 0.5 - Math.random());
+			const givers_national = people.filter((p) => !p.ships_international).sort((a,b) => 0.5 - Math.random());
+			const receivers_national = people.filter((p) => !p.receives_international).sort((a,b) => 0.5 - Math.random());
+			const receivers_international = people.filter((p) => p.receives_international).sort((a,b) => 0.5 - Math.random());
+			
+			
+			//Priorities list:
+			//1. People who cannot receive internationally with people who cannot send internationally of the same country (only pairing possible)
+			//2. People who cannot send internationally with people of the same country who can send internationally.
+			//3. People who can send internationally with international receivers.
+		
+		
+			//Clause 1
+			for(let i = givers_national.length - 1; i >= 0; i--){
+		
+				receivers_national.reduce((sel, val, index, array) =>{
+					if(sel === undefined){
+						if(givers_national[i].country === val.country && givers_national[i] !== val){
+							sel = val;
+							console.log(receivers_national[index].name);
+							pairings.push({sender: givers_national[i], sel});
+							array.splice(index, 1);
+							givers_national.splice(i, 1);
+							
+							
+						}
+					}
+		
+					return sel;
+				}, undefined);
+		
+			}
+		
+			//Clause 2
+			for(let i = givers_national.length - 1; i >= 0; i--){
+		
+				receivers_international.reduce((sel, val, index, array) =>{
+					if(sel === undefined){
+						if(givers_national[i].country === val.country && givers_national[i] !== val){
+							sel = val;
+							console.log(receivers_international[index].name);
+							pairings.push({sender: givers_national[i], sel});
+							array.splice(index, 1);
+							givers_national.splice(i, 1);
+							
+							
+						}
+					}
+		
+					return sel;
+				}, undefined);
+		
+			}
+		
+			//Clause 3
+			for(let i = givers_international.length - 1; i >= 0; i--){
+		
+				receivers_international.reduce((sel, val, index, array) =>{
+					if(sel === undefined){
+						if(givers_international[i].country === val.country && givers_international[i] !== val){
+							sel = val;
+							console.log(receivers_international[index].name);
+							pairings.push({sender: givers_international[i], sel});
+							array.splice(index, 1);
+							givers_international.splice(i, 1);
+							
+							
+						}
+					}
+		
+					return sel;
+				}, undefined);
+		
+			}
+		
+			console.log(pairings);
 		}
 
   	return (
@@ -113,9 +202,12 @@ class App extends React.Component{
 				}
 	  		</Accordion>
 			<Butt onClick={addPerson}><RiAddFill></RiAddFill>Add Person</Butt>
+
+			<Butt variant='success' onClick={generatePairings}>Generate Pairings</Butt>
 	  	</Col>
 	</Row>
     </Container>
+	
 
   );
 }
